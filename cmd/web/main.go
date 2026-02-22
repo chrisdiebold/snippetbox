@@ -9,6 +9,9 @@ func main() {
 	// a serveMux is a router. Stores a mapping between URLs routing patterns
 	// for the application and the corresponding handlers (controllers)
 	mux := http.NewServeMux()
+	// serve static files such as css, js, and images
+	fileServer := http.FileServer(http.Dir("./ui/static/"))
+	mux.Handle("GET /static/", http.StripPrefix("/static", fileServer))
 	// using {$} to prevent subtree path patterns from acting like they have a
 	// wildcard at the end - ends the pattern
 	mux.HandleFunc("GET /{$}", home)
