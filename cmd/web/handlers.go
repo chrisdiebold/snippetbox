@@ -2,13 +2,30 @@ package main
 
 import (
 	"fmt"
+	"html/template"
+	"log"
 	"net/http"
 	"strconv"
 )
 
 func home(w http.ResponseWriter, r *http.Request) {
+	// ParseFiles reads the template file into a template set. Then,
+	// Execute() writes the template content as the response body.
+	// The last arg to Execute() represents dynamic data we want to pass in.
 	w.Header().Add("Server", "Go")
-	w.Write([]byte("Hello from snippetbox"))
+	ts, err := template.ParseFiles("./ui/html/pages/home.tmpl.html")
+	if err != nil {
+		log.Print(err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	err = ts.Execute(w, nil)
+	if err != nil {
+		log.Print(err.Error())
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+	}
+
 }
 
 func snippetView(w http.ResponseWriter, r *http.Request) {
