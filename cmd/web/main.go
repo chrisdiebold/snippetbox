@@ -40,6 +40,11 @@ func main() {
 	}
 	defer pool.Close()
 
+	// ping will fail fast if we cannot hit the database. usually caused by bad credentials
+	if err := pool.Ping(ctx); err != nil {
+		log.Fatal("failed to reach database:", err)
+	}
+
 	queries := db.New(pool)
 
 	// Initialize a new instance of our application struct, containing the

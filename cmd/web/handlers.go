@@ -1,10 +1,15 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
 	"strconv"
+	"time"
+
+	"github.com/chrisdiebold/snippetbox/internal/db"
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -49,6 +54,34 @@ func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusCreated)
-	w.Write([]byte("Save a new snippet..."))
+	ctx := context.Background()
+	// Create some variables holding dummy data. We'll remove these later on
+	// during development.
+	title := "O snail"
+	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
+	expires := 7
+
+	expiration := pgtype.Timestamptz{
+		Time:  time.Now().Add(time.Duration(expires) * 24 * time.Hour),
+		Valid: true,
+	}
+	created := pgtype.Timestamptz{
+		Time:  time.Now(),
+		Valid: true,
+	}
+
+	params := db.CreateSnippetParams{
+		Title:   title,
+		Content: content,
+		Created: created,
+		Expires: expiration,
+	}
+
+	s, err := app.queries.CreateSnippet(ctx, params)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+	// Redirect the user to the relevant page for the snippet.
+	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", s.ID), http.StatusSeeOther)
 }
