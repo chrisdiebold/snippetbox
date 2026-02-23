@@ -52,6 +52,55 @@ func (q *Queries) DeleteSnippet(ctx context.Context, id int32) error {
 	return err
 }
 
+const getActiveSnippetsLimit10 = `-- name: GetActiveSnippetsLimit10 :many
+SELECT id, title, content, created, expires FROM snippets
+    WHERE expires > NOW() ORDER BY id DESC LIMIT 10
+`
+
+func (q *Queries) GetActiveSnippetsLimit10(ctx context.Context) ([]Snippet, error) {
+	rows, err := q.db.Query(ctx, getActiveSnippetsLimit10)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Snippet
+	for rows.Next() {
+		var i Snippet
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Content,
+			&i.Created,
+			&i.Expires,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getSnippetNotExpired = `-- name: GetSnippetNotExpired :one
+SELECT id, title, content, created, expires FROM snippets
+WHERE expires > NOW() AND id = $1
+`
+
+func (q *Queries) GetSnippetNotExpired(ctx context.Context, id int32) (Snippet, error) {
+	row := q.db.QueryRow(ctx, getSnippetNotExpired, id)
+	var i Snippet
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Content,
+		&i.Created,
+		&i.Expires,
+	)
+	return i, err
+}
+
 const listSnippets = `-- name: ListSnippets :many
 SELECT id, title, expires FROM snippets ORDER BY title
 `

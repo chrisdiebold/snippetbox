@@ -9,3 +9,11 @@ RETURNING *;
 -- name: DeleteSnippet :exec
 DELETE FROM snippets
 WHERE id = $1;
+
+-- name: GetSnippetNotExpired :one
+SELECT id, title, content, created, expires FROM snippets
+WHERE expires > NOW() AND id = $1;
+
+-- name: GetActiveSnippetsLimit10 :many
+SELECT id, title, content, created, expires FROM snippets
+    WHERE expires > NOW() ORDER BY id DESC LIMIT 10;

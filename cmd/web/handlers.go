@@ -13,10 +13,21 @@ import (
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
 	// ParseFiles reads the template file into a template set. Then,
 	// Execute() writes the template content as the response body.
 	// The last arg to Execute() represents dynamic data we want to pass in.
 	w.Header().Add("Server", "Go")
+
+	snippets, err := app.queries.GetActiveSnippetsLimit10(ctx)
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
+	for _, snippet := range snippets {
+		fmt.Fprintf(w, "%+v\n", snippet)
+	}
+
 	//base template must be first - every template is compiled into it
 	files := []string{
 		"./ui/html/base.tmpl.html",
@@ -38,6 +49,7 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 }
 
 func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
+	ctx := context.Background()
 	// always validate untrusted user input
 	// in this case, must be a positive integer
 	id, err := strconv.Atoi(r.PathValue("id"))
@@ -45,8 +57,15 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
-	msg := fmt.Sprintf("Display a specific snippet with ID %d", id)
-	w.Write([]byte(msg))
+
+	snippet, err := app.queries.GetSnippetNotExpired(ctx, int32(id))
+	if err != nil {
+		app.logger.Error(db.ErrNoRecord.Error())
+		app.serverError(w, r, err)
+		return
+	}
+	// Write the snippet data as a plain-text HTTP response body.
+	fmt.Fprintf(w, "%+v", snippet)
 }
 
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
