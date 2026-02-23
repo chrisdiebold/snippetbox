@@ -1,0 +1,12 @@
+This folder is where you can write migrations and queries that sqlc will read and generate type safe functions
+for use in the app. See sqlc.yaml for the structure.
+
+
+Good idea for a health check but should return json on /internal/api/health
+http.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+        if err := db.Ping(); err != nil {
+            http.Error(w, "db unreachable", http.StatusServiceUnavailable)
+            return
+        }
+        w.Write([]byte("ok"))
+    })
