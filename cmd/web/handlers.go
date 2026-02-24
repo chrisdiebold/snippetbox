@@ -13,10 +13,6 @@ import (
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	// ParseFiles reads the template file into a template set. Then,
-	// Execute() writes the template content as the response body.
-	// The last arg to Execute() represents dynamic data we want to pass in.
-	w.Header().Add("Server", "Go")
 
 	snippets, err := app.queries.GetActiveSnippetsLimit10(ctx)
 	if err != nil {
