@@ -8,8 +8,9 @@
     </div>
     <pre><code>{{.Content}}</code></pre>
     <div class='metadata'>
-      <time>Created: {{.Created.Time}}</time>
-      <time>Expires: {{.Expires.Time}}</time>
+      <!-- Use the new template function here -->
+      <time>Created: {{humanDate .Created.Time}}</time>
+      <time>Expires: {{humanDate .Expires.Time}}</time>
     </div>
   </div>
   {{end}}

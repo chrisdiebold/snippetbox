@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"html/template"
 	"log"
 	"log/slog"
 	"net/http"
@@ -17,8 +18,9 @@ import (
 // web application. For now we'll only include the structured logger, but we'll
 // add more to this as development progresses.
 type application struct {
-	logger  *slog.Logger
-	queries *db.Queries
+	logger        *slog.Logger
+	queries       *db.Queries
+	templateCache map[string]*template.Template
 }
 
 func main() {
@@ -47,11 +49,19 @@ func main() {
 
 	queries := db.New(pool)
 
+	// Initialize a new template cache...
+	templateCache, err := newTemplateCache()
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
 	// Initialize a new instance of our application struct, containing the
 	// dependencies (for now, just the structured logger).
 	app := &application{
-		logger:  logger,
-		queries: queries,
+		logger:        logger,
+		queries:       queries,
+		templateCache: templateCache,
 	}
 
 	// serve static files such as css, js, and images
