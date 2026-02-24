@@ -9,8 +9,9 @@ import (
 )
 
 type templateData struct {
-	Snippet  db.Snippet
-	Snippets []db.Snippet
+	CurrentYear int
+	Snippet     db.Snippet
+	Snippets    []db.Snippet
 }
 
 // Create a humanDate function which returns a nicely formatted string

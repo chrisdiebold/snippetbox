@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"runtime/debug"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 // The serverError helper writes a log entry at Error level (including the request
@@ -25,9 +28,9 @@ func (app *application) serverError(w http.ResponseWriter, r *http.Request, err 
 // The clientError helper sends a specific status code and corresponding description
 // to the user. We'll use this later in the book to send responses like 400 "Bad
 // Request" when there's a problem with the request that the user sent.
-// func (app *application) clientError(w http.ResponseWriter, status int) {
-// 	http.Error(w, http.StatusText(status), status)
-// }
+func (app *application) clientError(w http.ResponseWriter, status int) {
+	http.Error(w, http.StatusText(status), status)
+}
 
 func (app *application) render(w http.ResponseWriter, r *http.Request, status int, page string, data templateData) {
 	ts, ok := app.templateCache[page]
@@ -57,4 +60,28 @@ func (app *application) render(w http.ResponseWriter, r *http.Request, status in
 	// is another time where we pass our http.ResponseWriter to a function that
 	// takes an io.Writer.
 	buf.WriteTo(w)
+}
+
+// Create a newTemplateData() helper, which returns a templateData struct
+// initialized with the current year. Note that we're not using the *http.Request
+// parameter here at the moment, but we will use it later in the book.
+func (app *application) newTemplateData(r *http.Request) templateData {
+	return templateData{
+		CurrentYear: time.Now().Year(),
+	}
+}
+
+func (app *application) now() pgtype.Timestamptz {
+
+	return pgtype.Timestamptz{
+		Time:  time.Now(),
+		Valid: true,
+	}
+}
+
+func (app *application) expiresInDays(d int) pgtype.Timestamptz {
+	return pgtype.Timestamptz{
+		Time:  time.Now().Add(time.Duration(d) * 24 * time.Hour),
+		Valid: true,
+	}
 }

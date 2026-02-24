@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/chrisdiebold/snippetbox/internal/db"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 func (app *application) home(w http.ResponseWriter, r *http.Request) {
@@ -20,9 +18,9 @@ func (app *application) home(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	app.render(w, r, http.StatusOK, "home.tmpl.html", templateData{
-		Snippets: snippets,
-	})
+	data := app.newTemplateData(r)
+	data.Snippets = snippets
+	app.render(w, r, http.StatusOK, "home.tmpl.html", data)
 }
 
 func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
@@ -42,45 +40,57 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Use the new render helper.
-	app.render(w, r, http.StatusOK, "view.tmpl.html", templateData{
-		Snippet: snippet,
-	})
+	data := app.newTemplateData(r)
+	data.Snippet = snippet
+
+	app.render(w, r, http.StatusOK, "view.tmpl.html", data)
 
 }
 
 func (app *application) snippetCreate(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Hello from snippet create"))
+	data := app.newTemplateData(r)
+
+	app.render(w, r, http.StatusOK, "create.tmpl.html", data)
 }
 
 func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
-	// Create some variables holding dummy data. We'll remove these later on
-	// during development.
-	title := "O snail"
-	content := "O snail\nClimb Mount Fuji,\nBut slowly, slowly!\n\n– Kobayashi Issa"
-	expires := 7
 
-	expiration := pgtype.Timestamptz{
-		Time:  time.Now().Add(time.Duration(expires) * 24 * time.Hour),
-		Valid: true,
-	}
-	created := pgtype.Timestamptz{
-		Time:  time.Now(),
-		Valid: true,
+	// First we call r.ParseForm() which adds any data in POST request bodies
+	// to the r.PostForm map. This also works in the same way for PUT and PATCH
+	// requests. If there are any errors, we use our app.ClientError() helper to
+	// send a 400 Bad Request response to the user.
+	err := r.ParseForm()
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
 	}
 
-	params := db.CreateSnippetParams{
+	// Use the r.PostForm.Get() method to retrieve the title and content
+	// from the r.PostForm map.
+	title := r.PostForm.Get("title")
+	content := r.PostForm.Get("content")
+
+	// The r.PostForm.Get() method always returns the form data as a *string*.
+	// However, we're expecting our expires value to be a number, and want to
+	// represent it in our Go code as an integer. So we need to manually convert
+	// the form data to an integer using strconv.Atoi(), and send a 400 Bad
+	// Request response if the conversion fails.
+	expires, err := strconv.Atoi(r.PostForm.Get("expires"))
+	if err != nil {
+		app.clientError(w, http.StatusBadRequest)
+		return
+	}
+	s, err := app.queries.CreateSnippet(ctx, db.CreateSnippetParams{
 		Title:   title,
 		Content: content,
-		Created: created,
-		Expires: expiration,
-	}
-
-	s, err := app.queries.CreateSnippet(ctx, params)
+		Expires: app.expiresInDays(expires),
+		Created: app.now(),
+	})
 	if err != nil {
 		app.serverError(w, r, err)
 		return
 	}
-	// Redirect the user to the relevant page for the snippet.
+
 	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", s.ID), http.StatusSeeOther)
 }
