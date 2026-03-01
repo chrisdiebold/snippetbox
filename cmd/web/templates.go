@@ -12,6 +12,7 @@ type templateData struct {
 	CurrentYear int
 	Snippet     db.Snippet
 	Snippets    []db.Snippet
+	Form        any
 }
 
 // Create a humanDate function which returns a nicely formatted string
