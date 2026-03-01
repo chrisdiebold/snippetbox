@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/chrisdiebold/snippetbox/internal/db"
+	"github.com/go-playground/form/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -21,6 +22,7 @@ type application struct {
 	logger        *slog.Logger
 	queries       *db.Queries
 	templateCache map[string]*template.Template
+	formDecoder   *form.Decoder
 }
 
 func main() {
@@ -56,12 +58,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	formDecoder := form.NewDecoder()
 	// Initialize a new instance of our application struct, containing the
 	// dependencies (for now, just the structured logger).
 	app := &application{
 		logger:        logger,
 		queries:       queries,
 		templateCache: templateCache,
+		formDecoder:   formDecoder,
 	}
 
 	// serve static files such as css, js, and images
