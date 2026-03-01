@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"flag"
 	"fmt"
 	"html/template"
@@ -9,20 +10,25 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
-	"github.com/chrisdiebold/snippetbox/internal/db"
+	"github.com/alexedwards/scs/postgresstore"
+	"github.com/alexedwards/scs/v2"
+	"github.com/chrisdiebold/snippetbox/internal/dbx"
 	"github.com/go-playground/form/v4"
 	"github.com/jackc/pgx/v5/pgxpool"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // Define an application struct to hold the application-wide dependencies for the
 // web application. For now we'll only include the structured logger, but we'll
 // add more to this as development progresses.
 type application struct {
-	logger        *slog.Logger
-	queries       *db.Queries
-	templateCache map[string]*template.Template
-	formDecoder   *form.Decoder
+	logger         *slog.Logger
+	queries        *dbx.Queries
+	templateCache  map[string]*template.Template
+	formDecoder    *form.Decoder
+	sessionManager *scs.SessionManager
 }
 
 func main() {
@@ -44,12 +50,19 @@ func main() {
 	}
 	defer pool.Close()
 
+	// standard sql.DB just for scs
+	db, err := sql.Open("pgx", connStr)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
 	// ping will fail fast if we cannot hit the database. usually caused by bad credentials
 	if err := pool.Ping(ctx); err != nil {
 		log.Fatal("failed to reach database:", err)
 	}
 
-	queries := db.New(pool)
+	queries := dbx.New(pool)
 
 	// Initialize a new template cache...
 	templateCache, err := newTemplateCache()
@@ -59,6 +72,14 @@ func main() {
 	}
 
 	formDecoder := form.NewDecoder()
+
+	// Use the scs.New() function to initialize a new session manager. Then we
+	// configure it to use our MySQL database as the session store, and set a
+	// lifetime of 12 hours (so that sessions automatically expire 12 hours
+	// after first being created).
+	sessionManager := scs.New()
+	sessionManager.Store = postgresstore.New(db)
+	sessionManager.Lifetime = 12 * time.Hour
 	// Initialize a new instance of our application struct, containing the
 	// dependencies (for now, just the structured logger).
 	app := &application{

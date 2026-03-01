@@ -5,14 +5,15 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/chrisdiebold/snippetbox/internal/db"
+	"github.com/chrisdiebold/snippetbox/internal/dbx"
 )
 
 type templateData struct {
 	CurrentYear int
-	Snippet     db.Snippet
-	Snippets    []db.Snippet
+	Snippet     dbx.Snippet
+	Snippets    []dbx.Snippet
 	Form        any
+	Flash       string
 }
 
 // Create a humanDate function which returns a nicely formatted string

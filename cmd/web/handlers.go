@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/chrisdiebold/snippetbox/internal/db"
+	"github.com/chrisdiebold/snippetbox/internal/dbx"
 	"github.com/chrisdiebold/snippetbox/internal/validator"
 )
 
@@ -47,6 +48,7 @@ func (app *application) snippetView(w http.ResponseWriter, r *http.Request) {
 		app.serverError(w, r, err)
 		return
 	}
+
 	// Use the new render helper.
 	data := app.newTemplateData(r)
 	data.Snippet = snippet
@@ -93,7 +95,7 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	s, err := app.queries.CreateSnippet(ctx, db.CreateSnippetParams{
+	s, err := app.queries.CreateSnippet(ctx, dbx.CreateSnippetParams{
 		Title:   form.Title,
 		Content: form.Content,
 		Expires: app.expiresInDays(form.Expires),
@@ -103,6 +105,10 @@ func (app *application) snippetCreatePost(w http.ResponseWriter, r *http.Request
 		app.serverError(w, r, err)
 		return
 	}
+
+	// Use the Put() method to add a string value ("Snippet successfully
+	// created!") and the corresponding key ("flash") to the session data.
+	app.sessionManager.Put(r.Context(), "flash", "Snippet successfully created!")
 
 	http.Redirect(w, r, fmt.Sprintf("/snippet/view/%d", s.ID), http.StatusSeeOther)
 }
