@@ -89,13 +89,22 @@ func main() {
 		formDecoder:   formDecoder,
 	}
 
+	srv := &http.Server{
+		Addr:    *addr,
+		Handler: app.routes(),
+		// Create a *log.Logger from our structured logger handler, which writes
+		// log entries at the Error level, and assign it to the ErrorLog field. If
+		// you would prefer to log the server errors at Warn level instead, you
+		// could pass slog.LevelWarn as the final parameter.
+		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
+	}
 	// serve static files such as css, js, and images
 
 	logger.Info("starting server", "addr", *addr)
 	// starts a web server. If this returns an err we use the log.Fatal() function to log the
 	// error message and terminate the program.
 	// Note: any error returned by http.ListenAndServe() is always non-nil
-	err = http.ListenAndServe(*addr, app.routes())
+	err = srv.ListenAndServe()
 	logger.Error(err.Error())
 	os.Exit(1)
 }
