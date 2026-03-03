@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -89,6 +90,9 @@ func main() {
 		formDecoder:   formDecoder,
 	}
 
+	tlsConfig := &tls.Config{
+		CurvePreferences: []tls.CurveID{tls.X25519, tls.CurveP256},
+	}
 	srv := &http.Server{
 		Addr:    *addr,
 		Handler: app.routes(),
@@ -96,15 +100,19 @@ func main() {
 		// log entries at the Error level, and assign it to the ErrorLog field. If
 		// you would prefer to log the server errors at Warn level instead, you
 		// could pass slog.LevelWarn as the final parameter.
-		ErrorLog: slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		ErrorLog:     slog.NewLogLogger(logger.Handler(), slog.LevelError),
+		TLSConfig:    tlsConfig,
+		IdleTimeout:  time.Minute,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
 	}
 	// serve static files such as css, js, and images
 
 	logger.Info("starting server", "addr", *addr)
-	// starts a web server. If this returns an err we use the log.Fatal() function to log the
-	// error message and terminate the program.
-	// Note: any error returned by http.ListenAndServe() is always non-nil
-	err = srv.ListenAndServe()
+	// Use the ListenAndServeTLS() method to start the HTTPS server. We
+	// pass in the paths to the TLS certificate and corresponding private key as
+	// the two parameters.
+	err = srv.ListenAndServeTLS("./tls/cert.pem", "./tls/key.pem")
 	logger.Error(err.Error())
 	os.Exit(1)
 }
